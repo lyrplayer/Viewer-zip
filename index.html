@@ -1,1 +1,610 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Zip Viewer Rapi & Simple | Penampil Arsip</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
 
+    body {
+      background: linear-gradient(145deg, #f6f9fc 0%, #eef2f5 100%);
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      padding: 2rem 1.5rem;
+      min-height: 100vh;
+      color: #1a2c3e;
+    }
+
+    /* container utama */
+    .app-container {
+      max-width: 1300px;
+      margin: 0 auto;
+    }
+
+    /* header */
+    .header {
+      margin-bottom: 2rem;
+      text-align: center;
+    }
+
+    .header h1 {
+      font-size: 2.2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, #1e3c5c, #2b5f8a);
+      background-clip: text;
+      -webkit-background-clip: text;
+      color: transparent;
+      letter-spacing: -0.3px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .header h1::before {
+      content: "📁";
+      font-size: 2rem;
+      background: none;
+      color: #2c6e9e;
+    }
+
+    .sub {
+      color: #4a627a;
+      margin-top: 8px;
+      font-size: 0.95rem;
+      border-bottom: 1px solid #cbdbe2;
+      display: inline-block;
+      padding-bottom: 6px;
+    }
+
+    /* card utama */
+    .card {
+      background: rgba(255,255,255,0.85);
+      backdrop-filter: blur(0px);
+      border-radius: 32px;
+      box-shadow: 0 20px 35px -12px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.02);
+      padding: 1.8rem 2rem;
+      transition: all 0.2s ease;
+      border: 1px solid rgba(255,255,255,0.5);
+    }
+
+    /* area unggah / drag */
+    .upload-zone {
+      background: #ffffffdd;
+      border: 2px dashed #90a9c2;
+      border-radius: 28px;
+      padding: 2rem 1.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-bottom: 2.2rem;
+    }
+
+    .upload-zone:hover {
+      border-color: #2c6e9e;
+      background: #f5faff;
+      transform: scale(0.99);
+    }
+
+    .upload-icon {
+      font-size: 3.2rem;
+      margin-bottom: 12px;
+    }
+
+    .upload-zone p {
+      font-size: 1rem;
+      color: #2c4c6e;
+      font-weight: 500;
+    }
+
+    .upload-zone small {
+      color: #6c86a0;
+      font-size: 0.8rem;
+    }
+
+    input#zipInput {
+      display: none;
+    }
+
+    /* info file */
+    .file-info {
+      background: #e9f0f6;
+      border-radius: 40px;
+      padding: 12px 20px;
+      margin-bottom: 24px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .file-name {
+      background: #ffffffb3;
+      padding: 6px 16px;
+      border-radius: 32px;
+      color: #155f8b;
+      font-family: monospace;
+      word-break: break-all;
+    }
+
+    .reset-btn {
+      background: none;
+      border: 1px solid #b9cfec;
+      padding: 6px 16px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 500;
+      color: #2b5f8a;
+      transition: 0.2s;
+    }
+
+    .reset-btn:hover {
+      background: #ffffff;
+      border-color: #2b5f8a;
+    }
+
+    /* statistik ringkas */
+    .stats {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+    }
+
+    .stat-badge {
+      background: white;
+      border-radius: 80px;
+      padding: 6px 18px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* pohon direktori rapi */
+    .tree-view {
+      background: #ffffffea;
+      border-radius: 28px;
+      padding: 1.2rem 1rem 1.5rem 1rem;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 0.85rem;
+      overflow-x: auto;
+      max-height: 65vh;
+      min-height: 320px;
+      box-shadow: inset 0 0 0 1px #e2edf7, 0 2px 6px rgba(0,0,0,0.02);
+    }
+
+    .tree-node {
+      list-style: none;
+      margin-left: 0;
+      padding-left: 0;
+    }
+
+    .tree-node ul {
+      padding-left: 24px;
+      list-style: none;
+    }
+
+    .tree-item {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 5px 0;
+      border-radius: 12px;
+      transition: background 0.1s ease;
+      cursor: default;
+    }
+
+    .tree-item:hover {
+      background: #f1f9ff;
+    }
+
+    .folder-icon, .file-icon {
+      font-size: 1.1rem;
+      width: 26px;
+      text-align: center;
+    }
+
+    .item-name {
+      font-weight: 500;
+      word-break: break-word;
+      color: #1f3b4c;
+    }
+
+    .file-size {
+      font-size: 0.7rem;
+      color: #6b8aad;
+      background: #eef3fc;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-family: monospace;
+    }
+
+    .empty-message {
+      color: #8aa0b5;
+      text-align: center;
+      padding: 40px 20px;
+      font-style: italic;
+    }
+
+    .footer-note {
+      margin-top: 1.8rem;
+      text-align: center;
+      font-size: 0.7rem;
+      color: #6a7f99;
+    }
+
+    button, .upload-zone {
+      user-select: none;
+    }
+
+    /* responsif kecil */
+    @media (max-width: 680px) {
+      body {
+        padding: 1rem;
+      }
+      .card {
+        padding: 1.2rem;
+      }
+      .tree-view {
+        font-size: 0.75rem;
+      }
+    }
+  </style>
+  <!-- library JSZip dari CDN untuk ekstrak ZIP di sisi klien -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+</head>
+<body>
+<div class="app-container">
+  <div class="header">
+    <h1>📦 Zip Explorer</h1>
+    <div class="sub">Lihat hierarki & isi file .zip secara rapi dan simple</div>
+  </div>
+
+  <div class="card">
+    <!-- area unggah & drag drop -->
+    <div class="upload-zone" id="uploadZone">
+      <div class="upload-icon">🗂️📎</div>
+      <p>Klik atau taruh file <strong>lihat.zip</strong> di sini</p>
+      <small>Mendukung format .zip, tampilkan struktur folder & file dengan ukuran</small>
+    </div>
+    <input type="file" id="zipInput" accept=".zip,application/zip">
+
+    <!-- informasi file aktif dan tombol reset -->
+    <div id="fileInfoArea" style="display: none;">
+      <div class="file-info">
+        <span>📄 <span id="currentFileName"></span></span>
+        <button class="reset-btn" id="resetBtn">↺ Muat ulang / Hapus</button>
+      </div>
+      <div class="stats" id="statsArea">
+        <!-- statistik dinamis: jumlah folder/file -->
+      </div>
+    </div>
+
+    <!-- area tampilan hierarki file & folder -->
+    <div class="tree-view" id="treeContainer">
+      <div class="empty-message">✨ Belum ada file zip. Silakan unggah <strong>lihat.zip</strong> atau zip apapun untuk melihat hierarkinya.</div>
+    </div>
+    <div class="footer-note">
+      ⚡ Baca langsung di browser | Menampilkan pohon direktori rapi, ukuran file otomatis
+    </div>
+  </div>
+</div>
+
+<script>
+  (function() {
+    // DOM elements
+    const uploadZone = document.getElementById('uploadZone');
+    const zipInput = document.getElementById('zipInput');
+    const treeContainer = document.getElementById('treeContainer');
+    const fileInfoArea = document.getElementById('fileInfoArea');
+    const currentFileNameSpan = document.getElementById('currentFileName');
+    const resetBtn = document.getElementById('resetBtn');
+    const statsArea = document.getElementById('statsArea');
+
+    // state
+    let currentZipData = null;      // menyimpan data zip (JSZip object) atau null
+    let currentFileName = '';
+
+    // helper: format byte ke KB/MB/B
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 B';
+      if (typeof bytes !== 'number') return '? B';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // fungsi utama: membangun pohon hierarki dari objek zip (JSZip)
+    function buildTreeFromZip(zip) {
+      // zip.files berisi semua entri dengan path (termasuk folder dengan trailing slash)
+      const root = { name: 'root', children: {}, isFolder: true };
+
+      // iterate semua file/folder dari zip
+      for (let relativePath in zip.files) {
+        if (!zip.files.hasOwnProperty(relativePath)) continue;
+        const entry = zip.files[relativePath];
+        // path terpecah menjadi segment
+        const segments = relativePath.split('/').filter(seg => seg !== '');
+        if (segments.length === 0) continue;
+        
+        let current = root;
+        // traverse atau buat node hingga sebelum segmen terakhir
+        for (let i = 0; i < segments.length; i++) {
+          const seg = segments[i];
+          const isLast = (i === segments.length - 1);
+          // tentukan apakah node ini folder atau file
+          // jika segmen terakhir dan entry bukan folder -> file
+          // cek apakah entry.dir (JSZip properti) atau jika path berakhiran '/' dianggap folder
+          const isFolderEntry = entry.dir || (relativePath.endsWith('/') && isLast);
+          
+          if (!current.children[seg]) {
+            // node baru
+            current.children[seg] = {
+              name: seg,
+              children: {},
+              isFolder: !isLast || isFolderEntry,
+              size: (isLast && !isFolderEntry) ? (entry.uncompressedSize || 0) : null,
+              fullPath: relativePath
+            };
+          } else {
+            // jika node sudah ada (misal karena file/folder duplikat path)
+            // perbarui info jika ternyata folder memiliki ukuran dll
+            if (!isLast && !current.children[seg].isFolder) {
+              // kasus edge: path folder dulu? tapi aman
+              current.children[seg].isFolder = true;
+            }
+            if (isLast && !isFolderEntry && current.children[seg].size === null) {
+              current.children[seg].size = entry.uncompressedSize || 0;
+              current.children[seg].isFolder = false;
+            }
+          }
+          // pindah ke child
+          current = current.children[seg];
+        }
+      }
+
+      // konversi pohon anak menjadi format nested <ul> dengan fungsi rekursif
+      function renderNode(node, pathPrefix = '') {
+        if (!node) return '';
+        // jika node adalah file (bukan folder)
+        if (!node.isFolder) {
+          const sizeStr = (node.size !== null && node.size !== undefined) ? formatFileSize(node.size) : '';
+          return `
+            <li class="tree-node">
+              <div class="tree-item">
+                <span class="file-icon">📄</span>
+                <span class="item-name">${escapeHtml(node.name)}</span>
+                ${sizeStr ? `<span class="file-size">${sizeStr}</span>` : ''}
+              </div>
+            </li>
+          `;
+        }
+        
+        // node folder: memiliki children
+        const childrenKeys = Object.keys(node.children);
+        if (childrenKeys.length === 0) {
+          // folder kosong
+          return `
+            <li class="tree-node">
+              <div class="tree-item">
+                <span class="folder-icon">📁</span>
+                <span class="item-name">${escapeHtml(node.name)}</span>
+                <span class="file-size" style="background:#eef0f5;">kosong</span>
+              </div>
+            </li>
+          `;
+        }
+        
+        // folder dengan isi
+        const childrenHtml = childrenKeys.map(key => {
+          const childNode = node.children[key];
+          return renderNode(childNode, pathPrefix + '/' + node.name);
+        }).join('');
+        
+        return `
+          <li class="tree-node">
+            <div class="tree-item">
+              <span class="folder-icon">📁</span>
+              <span class="item-name">${escapeHtml(node.name)}</span>
+              <span class="file-size" style="background:#e9f0f6;">${childrenKeys.length} item</span>
+            </div>
+            <ul>${childrenHtml}</ul>
+          </li>
+        `;
+      }
+      
+      // root.children adalah isi level pertama (folder/file root)
+      const rootItems = root.children;
+      const rootKeys = Object.keys(rootItems);
+      if (rootKeys.length === 0) {
+        return '<div class="empty-message">📭 Arsip zip kosong (tidak berisi file apapun).</div>';
+      }
+      
+      // generate top-level list
+      const topLevelHtml = rootKeys.map(key => {
+        return renderNode(rootItems[key]);
+      }).join('');
+      
+      return `<ul class="tree-node" style="margin-left: 0; padding-left: 0;">${topLevelHtml}</ul>`;
+    }
+
+    // helper escape HTML untuk keamanan
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+      }).replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, function(c) {
+        return c;
+      });
+    }
+
+    // menampilkan statistik folder & file dari zip
+    function computeStats(zip) {
+      let fileCount = 0;
+      let folderCount = 0;
+      let totalSize = 0;
+      for (let path in zip.files) {
+        const entry = zip.files[path];
+        if (entry.dir || path.endsWith('/')) {
+          folderCount++;
+        } else {
+          fileCount++;
+          totalSize += (entry.uncompressedSize || 0);
+        }
+      }
+      return { fileCount, folderCount, totalSize };
+    }
+
+    // update stats UI
+    function updateStatsUI(zip) {
+      if (!zip) {
+        statsArea.innerHTML = '';
+        return;
+      }
+      const stats = computeStats(zip);
+      statsArea.innerHTML = `
+        <div class="stat-badge">📄 File: ${stats.fileCount}</div>
+        <div class="stat-badge">📁 Folder: ${stats.folderCount}</div>
+        <div class="stat-badge">💾 Total: ${formatFileSize(stats.totalSize)}</div>
+      `;
+    }
+
+    // proses utama: membaca file zip dan menampilkan hierarki
+    async function loadAndDisplayZip(file) {
+      if (!file) return;
+      
+      // reset tampilan sebelumnya
+      treeContainer.innerHTML = `<div class="empty-message">⏳ Membaca arsip ${escapeHtml(file.name)} ...</div>`;
+      
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(arrayBuffer);
+        currentZipData = zip;
+        currentFileName = file.name;
+        
+        // build hierarki rapi
+        const treeHtml = buildTreeFromZip(zip);
+        treeContainer.innerHTML = treeHtml;
+        
+        // update info file & stats
+        currentFileNameSpan.innerText = currentFileName;
+        fileInfoArea.style.display = 'block';
+        updateStatsUI(zip);
+        
+        // jika tidak ada file valid di zip -> fallback notifikasi
+        const totalFiles = Object.keys(zip.files).length;
+        if (totalFiles === 0) {
+          treeContainer.innerHTML = '<div class="empty-message">⚠️ Zip tidak memiliki entri (kosong).</div>';
+        }
+      } catch (err) {
+        console.error(err);
+        treeContainer.innerHTML = `<div class="empty-message">❌ Gagal membaca zip: ${err.message}. Pastikan file valid dan tidak korup.</div>`;
+        fileInfoArea.style.display = 'none';
+        currentZipData = null;
+        currentFileName = '';
+        statsArea.innerHTML = '';
+      }
+    }
+    
+    // reset semua state, hapus tampilan
+    function resetViewer() {
+      currentZipData = null;
+      currentFileName = '';
+      zipInput.value = '';      // clear input file
+      fileInfoArea.style.display = 'none';
+      treeContainer.innerHTML = '<div class="empty-message">✨ Belum ada file zip. Silakan unggah <strong>lihat.zip</strong> atau zip apapun untuk melihat hierarkinya.</div>';
+      statsArea.innerHTML = '';
+    }
+    
+    // event handler untuk file dari input
+    function handleFile(file) {
+      if (!file) return;
+      // validasi ekstensi atau tipe MIME
+      if (!file.name.toLowerCase().endsWith('.zip') && file.type !== 'application/zip' && file.type !== 'application/x-zip-compressed') {
+        // tetap coba load, karena bisa saja MIME tidak standar tapi tetap zip
+        if (!file.name.includes('.zip')) {
+          const confirmLoad = confirm("File tidak berekstensi .zip, tetapi tetap coba baca?");
+          if (!confirmLoad) {
+            resetViewer();
+            return;
+          }
+        }
+      }
+      loadAndDisplayZip(file);
+    }
+    
+    // drag & drop event
+    function setupDragAndDrop() {
+      uploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = "#eef3fe";
+        uploadZone.style.borderColor = "#2c6e9e";
+      });
+      uploadZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = "";
+        uploadZone.style.borderColor = "#90a9c2";
+      });
+      uploadZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadZone.style.background = "";
+        uploadZone.style.borderColor = "#90a9c2";
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+          const file = files[0];
+          if (file.name.toLowerCase().endsWith('.zip') || file.type.includes('zip')) {
+            handleFile(file);
+          } else {
+            treeContainer.innerHTML = `<div class="empty-message">⚠️ Tolong drop file .zip. (contoh: lihat.zip)</div>`;
+            resetViewer();
+          }
+        }
+      });
+    }
+    
+    // event klik uploadZone
+    uploadZone.addEventListener('click', () => {
+      zipInput.click();
+    });
+    
+    zipInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        const file = e.target.files[0];
+        handleFile(file);
+      } else {
+        // jika tidak ada file (batal)
+        if (!currentZipData) resetViewer();
+      }
+    });
+    
+    resetBtn.addEventListener('click', () => {
+      resetViewer();
+    });
+    
+    // Inisialisasi drag drop
+    setupDragAndDrop();
+    
+    // Bonus: untuk memudahkan demonstrasi, jika ingin memuat default "lihat.zip" secara otomatis tidak bisa karena client tidak bisa akses file lokal tanpa input.
+    // Tapi pengguna hanya perlu upload file bernama lihat.zip. 
+    // Saya bisa menambahkan catatan jika ingin prainstal, namun sesuai kebutuhan: membaca lihat.zip yang diunggah user.
+    // Di lingkungan GitHub Pages, user akan meng-upload zip mereka.
+    // Tampilkan pesan bahwa siap untuk "lihat.zip"
+    console.log("Ready: upload file zip (lihat.zip atau lainnya) untuk melihat hierarki rapi.");
+  })();
+</script>
+</body>
+</html>
